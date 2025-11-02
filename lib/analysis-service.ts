@@ -138,11 +138,24 @@ export async function startAnalysis(sessionId: string, code?: string): Promise<v
   session.status = 'running';
   session.progress = 0;
 
-  // Try Tiger analysis if environment is configured
-  const useTiger = Boolean(process.env.TIGER_DATABASE_URL || process.env.OPENAI_API_KEY);
+  // Check for any AI provider
+  const hasGroq = Boolean(process.env.GROQ_API_KEY);
+  const hasPerplexity = Boolean(process.env.PERPLEXITY_API_KEY);
+  const hasOpenAI = Boolean(process.env.OPENAI_API_KEY);
+  const hasTiger = Boolean(process.env.TIGER_DATABASE_URL);
+  
+  console.log('🔍 Environment check:', {
+    hasGroq,
+    hasPerplexity,
+    hasOpenAI,
+    hasTiger,
+    hasCode: Boolean(code)
+  });
+  
+  const useTiger = hasTiger || hasOpenAI || hasGroq || hasPerplexity;
   
   if (useTiger && code) {
-    console.log('🐅 Using Tiger-powered analysis');
+    console.log('🐅 Using AI-powered analysis');
     
     // Update progress every second
     const interval = setInterval(() => {
@@ -177,14 +190,25 @@ export async function startAnalysis(sessionId: string, code?: string): Promise<v
       
       console.log('✓ Tiger analysis complete');
     } catch (error) {
-      console.error('Tiger analysis error:', error);
+      console.error('❌ Analysis error:', error);
+      console.error('Error details:', {
+        message: (error as Error).message,
+        stack: (error as Error).stack
+      });
       clearInterval(interval);
       session.status = 'error';
       throw error;
     }
   } else {
-    // No Tiger or AI configured - fail immediately
+    // No AI provider configured
+    console.error('❌ No AI provider configured');
+    console.error('Available providers:', {
+      GROQ_API_KEY: hasGroq ? 'set' : 'missing',
+      PERPLEXITY_API_KEY: hasPerplexity ? 'set' : 'missing',
+      OPENAI_API_KEY: hasOpenAI ? 'set' : 'missing',
+      TIGER_DATABASE_URL: hasTiger ? 'set' : 'missing'
+    });
     session.status = 'error';
-    throw new Error('No AI provider configured. Please add GROQ_API_KEY or PERPLEXITY_API_KEY to .env.local');
+    throw new Error('No AI provider configured. Please configure GROQ_API_KEY, PERPLEXITY_API_KEY, or OPENAI_API_KEY in environment variables.');
   }
 }
