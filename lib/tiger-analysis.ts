@@ -50,6 +50,16 @@ export async function performTigerAnalysis(
   console.log('🐅 Starting Tiger-powered cascading analysis...');
   const analysisStart = Date.now();
   
+  // Check if Tiger database is available
+  const hasTigerDB = Boolean(process.env.TIGER_DATABASE_URL);
+  console.log('Database available:', hasTigerDB);
+  
+  // If no database, use AI-only analysis
+  if (!hasTigerDB) {
+    console.log('⚡ Using AI-only analysis (no database)');
+    return await performAIOnlyAnalysis(code, onProgress);
+  }
+  
   try {
     // ==================== PHASE 1: RAG STRATEGY TESTING ====================
     console.log('\n📊 PHASE 1: Testing RAG Strategies...');
@@ -669,6 +679,114 @@ async function analyzeMCPDomain(pool: any): Promise<any> {
       indexSuggestions: [],
       performance: { slowQueries: [], recommendations: [], overallScore: 0 }
     };
+  }
+}
+
+/**
+ * AI-only analysis when no database is available
+ * Uses Groq/Perplexity APIs directly without Tiger database features
+ */
+async function performAIOnlyAnalysis(
+  code: string,
+  onProgress?: (phase: number, stage: number, message: string, data?: any) => void
+): Promise<AnalysisResults> {
+  console.log('🤖 Starting AI-only analysis (no database)...');
+  const analysisStart = Date.now();
+  
+  try {
+    onProgress?.(1, 1, '🔍 Analyzing code with AI...');
+    
+    // Run analyses in parallel using available AI
+    const [securityResults, soc2Results, iso27001Results] = await Promise.all([
+      // Security analysis
+      (async () => {
+        onProgress?.(1, 2, '🔒 Security analysis...');
+        const analysis = await analyzeCodeWithGroq(code);
+        const findings = analysis.vulnerabilities || [];
+        
+        return {
+          total: findings.length,
+          critical: findings.filter((f: any) => f.severity === 'critical').length,
+          high: findings.filter((f: any) => f.severity === 'high').length,
+          medium: findings.filter((f: any) => f.severity === 'medium').length,
+          findings: findings.map((v: any, idx: number) => ({
+            id: idx + 1,
+            type: v.type || 'Security Issue',
+            severity: v.severity || 'medium',
+            file: v.file || 'unknown',
+            line: v.line || 0,
+            owasp: v.owasp || 'N/A',
+            cwe: v.cwe || 'N/A',
+            cvss: v.cvss || 5.0,
+            description: v.description || v.message || 'Security vulnerability detected',
+            recommendation: v.fix || v.recommendation || 'Review and fix this issue'
+          }))
+        };
+      })(),
+      
+      // SOC2 analysis
+      (async () => {
+        onProgress?.(1, 3, '📋 SOC2 compliance check...');
+        const secAnalysis = await analyzeCodeWithGroq(code);
+        const soc2 = await checkSOC2WithGroq(code, secAnalysis.vulnerabilities || []);
+        
+        return {
+          readiness: soc2.readiness || 0,
+          controls: soc2.controls || [],
+          gaps: soc2.gaps || [],
+          recommendations: soc2.recommendations || [],
+          passed: soc2.passed || [],
+          atRisk: soc2.atRisk || [],
+          failed: soc2.failed || [],
+          violations: soc2.violations || []
+        };
+      })(),
+      
+      // ISO 27001 analysis
+      (async () => {
+        onProgress?.(1, 4, '🔐 ISO 27001 compliance check...');
+        const secAnalysis = await analyzeCodeWithGroq(code);
+        const iso = await checkISO27001WithGroq(code, secAnalysis.vulnerabilities || []);
+        
+        return iso || {
+          readiness: 0,
+          controls: [],
+          gaps: [],
+          recommendations: []
+        };
+      })()
+    ]);
+    
+    onProgress?.(1, 5, '✅ Analysis complete!');
+    
+    const totalTime = (Date.now() - analysisStart) / 1000;
+    console.log(`✅ AI-only analysis complete in ${totalTime.toFixed(1)}s`);
+    
+    return {
+      security: securityResults,
+      soc2: soc2Results,
+      iso27001: iso27001Results,
+      rag: {
+        strategies: [] as any,
+        winner: 'AI-Direct',
+        reason: 'Using AI APIs directly (no database)',
+        phase: 'ai-only'
+      },
+      mcp: {
+        schemaRecommendations: [],
+        indexSuggestions: [],
+        performance: {
+          slowQueries: [],
+          recommendations: ['Connect Tiger database for performance insights'],
+          overallScore: 0
+        }
+      },
+      certifications: await recommendCertificationsWithGroq(securityResults.findings),
+      analysisTime: totalTime
+    };
+  } catch (error) {
+    console.error('❌ AI-only analysis error:', error);
+    throw error;
   }
 }
 
