@@ -111,9 +111,9 @@ export async function GET(request: NextRequest) {
         rulesSet: 'custom',
         customRules: {
           patterns: [
-            { type: 'SQL Injection', pattern: '/query.*=.*f"|SELECT.*\\+/i' },
-            { type: 'XSS', pattern: '/<script|innerHTML.*=/i' },
-            { type: 'Secrets', pattern: '/(password|secret|key)\\s*=\\s*["\'][a-zA-Z0-9]+["\\']/i' }
+            { type: 'SQL Injection', pattern: '/query.*=|SELECT.*/i' },
+            { type: 'XSS', pattern: '/<script|innerHTML/i' },
+            { type: 'Secrets', pattern: '/(password|secret|key)\\s*=/i' }
           ]
         }
       }
@@ -121,7 +121,7 @@ export async function GET(request: NextRequest) {
     examples: {
       parallel_test: {
         type: 'parallel',
-        code: 'username = input("Username: ")\\nquery = f"SELECT * FROM users WHERE username=\\'{username}\\'"',
+        code: 'username = input("Username")\\nquery = "SELECT * FROM users"',
         configs: ['strict', 'permissive', 'balanced']
       },
       ab_test: {
@@ -132,7 +132,7 @@ export async function GET(request: NextRequest) {
       },
       validate_patterns: {
         type: 'validate_patterns',
-        testCode: ['SELECT * FROM users', 'eval(x)', 'password="test"'],
+        testCode: ['SELECT * FROM users', 'eval(x)', 'password=test'],
         newPatterns: [{ type: 'Test', pattern: '/test/i' }]
       }
     },
