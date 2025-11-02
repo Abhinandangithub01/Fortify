@@ -114,7 +114,7 @@ Return JSON array of findings:
   }
 
   private generateSecurityFindings(code: string): any[] {
-    const findings = [];
+    const findings: any[] = [];
     const lines = code.split('\n');
 
     const patterns = [
@@ -206,7 +206,7 @@ Return compliance violations.`;
   }
 
   private generateComplianceFindings(code: string): any[] {
-    const findings = [];
+    const findings: any[] = [];
 
     // Check for common compliance issues
     if (!/encrypt|hash|bcrypt/i.test(code)) {
@@ -268,7 +268,7 @@ class PerformanceAgent extends BaseAgent {
   }
 
   private analyzePerformance(code: string): any[] {
-    const findings = [];
+    const findings: any[] = [];
     const lines = code.split('\n');
 
     // Check for performance issues
