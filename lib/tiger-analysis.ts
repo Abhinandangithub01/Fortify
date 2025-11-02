@@ -772,15 +772,6 @@ async function performAIOnlyAnalysis(
         reason: 'Using AI APIs directly (no database)',
         phase: 'ai-only'
       },
-      mcp: {
-        schemaRecommendations: [],
-        indexSuggestions: [],
-        performance: {
-          slowQueries: [],
-          recommendations: ['Connect Tiger database for performance insights'],
-          overallScore: 0
-        }
-      },
       certifications: await recommendCertificationsWithGroq(securityResults.findings),
       analysisTime: totalTime
     };
