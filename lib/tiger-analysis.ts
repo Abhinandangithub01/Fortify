@@ -51,7 +51,11 @@ export async function performTigerAnalysis(
   const analysisStart = Date.now();
   
   // Check if Tiger database is available
-  const hasTigerDB = Boolean(process.env.TIGER_DATABASE_URL);
+  const tigerDbUrl = process.env.TIGER_DATABASE_URL;
+  console.log('🔍 TIGER_DATABASE_URL:', tigerDbUrl ? `Set (${tigerDbUrl.substring(0, 20)}...)` : 'NOT SET');
+  console.log('🔍 All env vars:', Object.keys(process.env).filter(k => k.includes('TIGER') || k.includes('GROQ') || k.includes('PERPLEXITY')));
+  
+  const hasTigerDB = Boolean(tigerDbUrl && tigerDbUrl.trim().length > 0);
   console.log('Database available:', hasTigerDB);
   
   // If no database, use AI-only analysis
