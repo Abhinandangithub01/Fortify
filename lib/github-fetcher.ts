@@ -83,36 +83,50 @@ export async function fetchGitHubRepository(githubUrl: string): Promise<string> 
 
     console.log(`✅ Found ${codeFiles.length} code files`);
 
-    // Fetch content of up to 50 files (to avoid rate limits and huge payloads)
-    const filesToFetch = codeFiles.slice(0, 50);
+    // Fetch content of up to 20 files (optimized for Lambda timeout)
+    const filesToFetch = codeFiles.slice(0, 20);
     const fileContents: string[] = [];
 
-    for (const file of filesToFetch) {
-      try {
-        const fileUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${file.path}?ref=${branch}`;
-        const fileResponse = await fetch(fileUrl, {
-          headers: {
-            'Accept': 'application/vnd.github.v3.raw',
-            'User-Agent': 'Fortify-Security-Analysis'
-          }
-        });
+    // Fetch files in parallel (max 5 at a time to avoid rate limits)
+    const batchSize = 5;
+    for (let i = 0; i < filesToFetch.length; i += batchSize) {
+      const batch = filesToFetch.slice(i, i + batchSize);
+      
+      const batchPromises = batch.map(async (file: any) => {
+        try {
+          const fileUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${file.path}?ref=${branch}`;
+          const fileResponse = await fetch(fileUrl, {
+            headers: {
+              'Accept': 'application/vnd.github.v3.raw',
+              'User-Agent': 'Fortify-Security-Analysis'
+            }
+          });
 
-        if (fileResponse.ok) {
-          const content = await fileResponse.text();
-          fileContents.push(`\n\n// ========== FILE: ${file.path} ==========\n${content}`);
+          if (fileResponse.ok) {
+            const content = await fileResponse.text();
+            return `\n\n// ========== FILE: ${file.path} ==========\n${content}`;
+          }
+        } catch (error) {
+          console.warn(`⚠️ Failed to fetch ${file.path}:`, error);
         }
-      } catch (error) {
-        console.warn(`⚠️ Failed to fetch ${file.path}:`, error);
-      }
+        return null;
+      });
+
+      const batchResults = await Promise.all(batchPromises);
+      fileContents.push(...batchResults.filter(Boolean) as string[]);
     }
 
     if (fileContents.length === 0) {
       throw new Error('No code files could be fetched from the repository');
     }
 
-    const combinedCode = `// GitHub Repository: ${owner}/${repo}\n// Branch: ${branch}\n// Files analyzed: ${fileContents.length}\n${fileContents.join('\n')}`;
+    const combinedCode = `// GitHub Repository: ${owner}/${repo}\n// Branch: ${branch}\n// Files analyzed: ${fileContents.length} of ${codeFiles.length} total code files\n${fileContents.join('\n')}`;
     
     console.log(`✅ Successfully fetched ${fileContents.length} files, total size: ${combinedCode.length} characters`);
+    
+    if (codeFiles.length > 20) {
+      console.log(`ℹ️ Note: Repository has ${codeFiles.length} code files, but only first 20 were analyzed to optimize performance`);
+    }
     
     return combinedCode;
   } catch (error) {
