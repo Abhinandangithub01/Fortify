@@ -7,7 +7,8 @@ const nextConfig = {
   
   // Performance optimizations
   compiler: {
-    removeConsole: process.env.NODE_ENV === 'production',
+    // Keep console logs for debugging - can be re-enabled later
+    removeConsole: false,
   },
   
   // Image optimization
