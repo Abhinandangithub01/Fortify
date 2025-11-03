@@ -4,15 +4,28 @@ import { AnalysisRequestSchema, sanitizeInput } from '@/lib/validation';
 import { z } from 'zod';
 
 export async function POST(request: NextRequest) {
-  // Force logging to work in Lambda
-  const log = (...args: any[]) => {
-    console.log(...args);
-    console.error(...args); // Also log to stderr which Lambda captures better
-  };
+  // CRITICAL: Use multiple logging methods to ensure visibility
+  const timestamp = new Date().toISOString();
   
-  log('========================================');
-  log('🚀 POST /api/analysis/start called');
-  log('========================================');
+  // Method 1: Standard console
+  console.log(`[${timestamp}] ========================================`);
+  console.log(`[${timestamp}] 🚀 POST /api/analysis/start called`);
+  console.log(`[${timestamp}] ========================================`);
+  
+  // Method 2: Console error (higher priority)
+  console.error(`[${timestamp}] ========================================`);
+  console.error(`[${timestamp}] 🚀 POST /api/analysis/start called`);
+  console.error(`[${timestamp}] ========================================`);
+  
+  // Method 3: Direct stdout/stderr
+  process.stdout.write(`[${timestamp}] STDOUT: API called\n`);
+  process.stderr.write(`[${timestamp}] STDERR: API called\n`);
+  
+  const log = (...args: any[]) => {
+    const ts = new Date().toISOString();
+    console.log(`[${ts}]`, ...args);
+    console.error(`[${ts}]`, ...args);
+  };
   
   try {
     // Parse and validate request body

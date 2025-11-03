@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { testConnection, getMainPool } from '@/lib/database';
 
 export async function GET(request: NextRequest) {
+  // CRITICAL: Test logging
+  console.log('========== HEALTH CHECK CALLED ==========');
+  console.error('========== HEALTH CHECK CALLED (stderr) ==========');
+  process.stdout.write('HEALTH CHECK stdout\n');
+  process.stderr.write('HEALTH CHECK stderr\n');
+  
   const startTime = Date.now();
   
   const health = {
